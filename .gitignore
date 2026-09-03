@@ -38,12 +38,3 @@ coverage.out
 *.sqlite3
 build/linux/appimage/build
 build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
-# Mobile generated (per-machine; overlays hold absolute paths)
-build/ios/xcode/overlay.json
-build/ios/xcode/gen/
-build/android/overlay.json
-build/android/gen/
-build/android/.gradle/
-build/android/local.properties
-build/android/app/build/
-build/ios/DerivedData/

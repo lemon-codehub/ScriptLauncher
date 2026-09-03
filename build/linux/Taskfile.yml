@@ -3,25 +3,14 @@ version: '3'
 includes:
   common: ../Taskfile.yml
 
-vars:
-  # Signing configuration - edit these values for your project
-  # PGP_KEY: "path/to/signing-key.asc"
-  # SIGN_ROLE: "builder"  # Options: origin, maint, archive, builder
-  #
-  # Password is stored securely in system keychain. Run: wails3 setup signing
-
-  # Docker image for cross-compilation (used when building on non-Linux or no CC available)
-  CROSS_IMAGE: wails-cross
-
 tasks:
   build:
     summary: Builds the application for Linux
+    preconditions:
+      - sh: '{{if and (eq OS "linux") (eq .HAS_CC "true") (eq .TARGET_ARCH ARCH)}}true{{else}}false{{end}}'
+        msg: "Linux builds require a same-architecture Linux host with gcc or clang installed."
     cmds:
-      # Linux requires CGO - use Docker when:
-      # 1. Cross-compiling from non-Linux, OR
-      # 2. No C compiler is available, OR
-      # 3. Target architecture differs from host architecture (cross-arch compilation)
-      - task: '{{if and (eq OS "linux") (eq .HAS_CC "true") (eq .TARGET_ARCH ARCH)}}build:native{{else}}build:docker{{end}}'
+      - task: build:native
         vars:
           ARCH: '{{.ARCH}}'
           DEV: '{{.DEV}}'
@@ -66,38 +55,6 @@ tasks:
       GOOS: linux
       CGO_ENABLED: 1
       GOARCH: '{{.ARCH | default ARCH}}'
-
-  build:docker:
-    summary: Builds for Linux using Docker (for non-Linux hosts or when no C compiler available)
-    internal: true
-    deps:
-      - task: common:build:frontend
-        vars:
-          OBFUSCATED:
-            ref: .OBFUSCATED
-      - task: common:generate:icons
-      - task: generate:dotdesktop
-    preconditions:
-      - sh: docker info > /dev/null 2>&1
-        msg: "Docker is required for cross-compilation to Linux. Please install Docker."
-      - sh: docker image inspect {{.CROSS_IMAGE}} > /dev/null 2>&1
-        msg: |
-          Docker image '{{.CROSS_IMAGE}}' not found.
-          Build it first: wails3 task setup:docker
-    cmds:
-      - docker run --rm -v "{{.ROOT_DIR}}:/app" {{.DOCKER_MOUNTS}} -e APP_NAME="{{.APP_NAME}}" {{if .EXTRA_TAGS}}-e EXTRA_TAGS="{{.EXTRA_TAGS}}"{{end}} {{if eq .OBFUSCATED "true"}}-e OBFUSCATED=true{{end}} {{if .GARBLE_ARGS}}-e GARBLE_ARGS="{{.GARBLE_ARGS}}"{{end}} "{{.CROSS_IMAGE}}" linux {{.DOCKER_ARCH}}
-      - cmd: docker run --rm -v "{{.ROOT_DIR}}:/app" alpine chown -R $(id -u):$(id -g) /app/bin
-        platforms: [linux, darwin]
-      - mkdir -p {{.BIN_DIR}}
-      - mv "bin/{{.APP_NAME}}-linux-{{.DOCKER_ARCH}}" "{{.OUTPUT}}"
-    vars:
-      DOCKER_ARCH: '{{.ARCH | default "amd64"}}'
-      DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.APP_NAME}}'
-      OUTPUT: '{{ .OUTPUT | default .DEFAULT_OUTPUT }}'
-      # Generate Docker volume mounts: Go module cache + go.mod replace directives
-      # Uses wails3 tool docker-mounts for cross-platform compatibility (Windows/Linux/macOS)
-      DOCKER_MOUNTS:
-        sh: 'wails3 tool docker-mounts'
 
   package:
     summary: Packages the application for Linux

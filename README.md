@@ -14,6 +14,10 @@
 
 [产品介绍与下载](https://lemontree.one/script_launcher/) · [GitHub Releases](https://github.com/lemon-codehub/ScriptLauncher/releases) · [问题反馈](https://github.com/lemon-codehub/ScriptLauncher/issues)
 
+## 界面预览
+
+![Script Launcher 界面：分组管理、脚本入口与实时执行日志](docs/images/script-launcher.png)
+
 ## 为什么做这个工具？
 
 启动开发服务、构建项目、部署应用、备份数据库……这些命令常常散落在终端历史和不同目录中。Script Launcher 将它们整理成可搜索、可分组的入口，保留现有脚本，一键运行并实时查看输出。
@@ -76,7 +80,8 @@ macOS 打开 DMG 后，将 `Script Launcher.app` 拖入“应用程序”。Wind
 - Node.js 24 LTS、pnpm 11.9.0。
 - Wails CLI **v3.0.0-alpha2.117**，与 `go.mod` 和前端运行时保持一致。
 - macOS 需要 Xcode Command Line Tools；Windows 需要 WebView2。
-- DMG 打包必须在 macOS 上执行。仓库中的移动端/Linux 构建文件来自 Wails 模板，当前发行目标仅为 macOS 与 Windows。
+- DMG 打包必须在 macOS 上执行；Windows EXE 可使用 Go 交叉编译，无需 Docker。
+- 当前发行目标仅为 macOS 与 Windows，不包含 Android、iOS 或 Docker 构建支持。保留的 Linux 原生构建模板需在同架构 Linux 主机上使用。
 
 ```bash
 git clone https://github.com/lemon-codehub/ScriptLauncher.git
