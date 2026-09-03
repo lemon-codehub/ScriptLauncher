@@ -1,0 +1,137 @@
+name: Package Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (x.y.z, without v); uploads artifacts only'
+        required: true
+        type: string
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-${{ github.ref }}-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Validate version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            version="$INPUT_VERSION"
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid version: expected x.y.z" >&2; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: prepare
+    runs-on: macos-15
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos-arm64
+            target: mac
+            arch: arm64
+          - name: macos-amd64
+            target: mac
+            arch: amd64
+          - name: windows-amd64
+            target: windows
+            arch: amd64
+    env:
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+      PACKAGE_TARGET: ${{ matrix.target }}
+      PACKAGE_ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          wails: 'true'
+      - name: Package platform
+        shell: bash
+        run: |
+          if [[ "$PACKAGE_TARGET" == "mac" ]]; then
+            ./scripts/package-release.sh "$RELEASE_VERSION" --target mac --mac-arch "$PACKAGE_ARCH" --no-installer
+          else
+            ./scripts/package-release.sh "$RELEASE_VERSION" --target windows --windows-arch "$PACKAGE_ARCH" --no-installer
+          fi
+      - name: Verify checksums and restored metadata
+        shell: bash
+        run: |
+          (cd "release/v$RELEASE_VERSION" && shasum -a 256 -c SHA256SUMS.txt)
+          git diff --exit-code -- go.mod go.sum frontend/pnpm-lock.yaml build/config.yml build/darwin/Info.plist build/windows/info.json build/windows/wails.exe.manifest build/windows/nsis/wails_tools.nsh
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: build-${{ matrix.name }}
+          path: release/v${{ env.RELEASE_VERSION }}/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  collect:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: build-*
+          path: artifacts
+      - name: Verify all platforms and assemble checksums
+        shell: bash
+        run: |
+          mkdir -p release
+          for directory in artifacts/build-*; do
+            (cd "$directory" && sha256sum -c SHA256SUMS.txt)
+            cp "$directory"/ScriptLauncher-* release/
+          done
+          for suffix in macos-arm64.dmg macos-arm64.zip macos-amd64.dmg macos-amd64.zip windows-amd64.exe windows-amd64-portable.zip; do
+            test -s "release/ScriptLauncher-$RELEASE_VERSION-$suffix"
+          done
+          cp LICENSE THIRD_PARTY_NOTICES.md "frontend/Inter Font License.txt" release/
+          (cd release && sha256sum ScriptLauncher-* LICENSE THIRD_PARTY_NOTICES.md 'Inter Font License.txt' > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ScriptLauncher-v${{ env.RELEASE_VERSION }}
+          path: release/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - name: Create or update a draft release for the tag
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --json isDraft > "$RUNNER_TEMP/release.json" 2>/dev/null; then
+            jq -e '.isDraft == true' "$RUNNER_TEMP/release.json" >/dev/null || { echo "Refusing to overwrite a published release" >&2; exit 1; }
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Script Launcher $GITHUB_REF_NAME" --generate-notes
+          fi
+          gh release upload "$GITHUB_REF_NAME" release/* --clobber

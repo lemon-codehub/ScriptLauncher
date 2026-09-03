@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=Script Launcher
+Comment=Lightweight local script and command launcher
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/scriptlauncher %u
+Terminal=false
+Type=Application
+Icon=scriptlauncher
+Categories=Utility;
+StartupWMClass=scriptlauncher

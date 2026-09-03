@@ -1,0 +1,48 @@
+# Local-only website and deployment configuration (never publish)
+/website/
+/scripts/package-and-deploy.sh
+
+# Dependencies, build output and caches
+.task/
+.DS_Store
+/bin/
+/release/
+/frontend/dist/*
+!/frontend/dist/.gitkeep
+node_modules/
+.pnpm-store/
+*.syso
+*.test
+*.test.exe
+coverage.out
+*.log
+
+# Personal editor / agent configuration and secrets
+.claude/
+.codex/
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+build/linux/appimage/build
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+# Mobile generated (per-machine; overlays hold absolute paths)
+build/ios/xcode/overlay.json
+build/ios/xcode/gen/
+build/android/overlay.json
+build/android/gen/
+build/android/.gradle/
+build/android/local.properties
+build/android/app/build/
+build/ios/DerivedData/

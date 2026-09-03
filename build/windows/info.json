@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.1.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.1.0",
+			"CompanyName": "Script Launcher",
+			"FileDescription": "Lightweight local script and command launcher",
+			"LegalCopyright": "Copyright 2026 Script Launcher",
+			"ProductName": "Script Launcher",
+			"Comments": "Script Launcher desktop application"
+		}
+	}
+}

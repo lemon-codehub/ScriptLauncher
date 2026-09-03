@@ -1,0 +1,32 @@
+name: Bug 报告
+description: 报告启动、执行、界面或数据问题
+title: "[Bug] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: 版本或提交
+      placeholder: 例如 v0.0.2 / main 的提交 SHA
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 系统与架构
+      placeholder: 例如 macOS 15 arm64 / Windows 11 x64
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤与预期结果
+      description: 请说明是否开启“在终端中显示”，尽量提供无破坏性的最小示例脚本。
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 实际结果、日志或截图
+      description: 发布前请删除访问令牌、密码、私有地址及个人路径。
+    validations:
+      required: true

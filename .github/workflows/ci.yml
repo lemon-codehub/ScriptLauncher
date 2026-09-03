@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Install frontend dependencies
+        run: pnpm --dir frontend install --frozen-lockfile
+      - name: Build frontend
+        run: pnpm --dir frontend build
+      - name: Test and vet Go
+        run: |
+          go test ./...
+          go vet ./...
+          go test -race -run TestStopEntry .
+      - name: Verify Windows x64 compilation
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: go build -o "$RUNNER_TEMP/scriptlauncher.exe" .
+      - name: Check tracked build inputs remain unchanged
+        run: git diff --exit-code -- go.mod go.sum frontend/pnpm-lock.yaml frontend/dist/.gitkeep

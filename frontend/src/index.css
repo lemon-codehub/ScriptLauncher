@@ -1,0 +1,189 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: Inter;
+  src: url("/Inter-Medium.ttf") format("truetype");
+  font-weight: 500;
+}
+
+:root {
+  font-family: Inter, "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  color: #0f172a;
+  background: #dce4ee;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+:root.dark {
+  color: #e2e8f0;
+  background: #111827;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  --wails-draggable: no-drag;
+}
+
+input,
+select,
+pre {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.dark .field-label {
+  color: #cbd5e1;
+}
+
+.field-input {
+  width: 100%;
+  height: 2.625rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: white;
+  padding: 0 0.75rem;
+  color: #0f172a;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+
+.field-input-with-icon {
+  padding-left: 2.5rem;
+}
+
+.dark .field-input {
+  border-color: #334155;
+  background: #182235;
+  color: #f1f5f9;
+}
+
+.field-input::placeholder {
+  color: #94a3b8;
+}
+
+.field-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgb(14 165 233 / 0.1);
+}
+
+.dark .field-input:focus {
+  border-color: #38bdf8;
+  background: #1b2940;
+}
+
+.status-badge {
+  display: inline-flex;
+  height: 1.5rem;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  padding: 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.entry-play {
+  display: inline-grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #64748b;
+  transition: background 150ms, color 150ms;
+}
+
+.dark .entry-play {
+  background: #243147;
+  color: #94a3b8;
+}
+
+.group\/card:hover .entry-play {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.dark .group\/card:hover .entry-play {
+  background: rgb(14 165 233 / 0.15);
+  color: #38bdf8;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialog-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(.98); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in { animation: fade-in 150ms ease-out; }
+.animate-dialog-in { animation: dialog-in 180ms ease-out; }
+.animate-menu-in { animation: menu-in 130ms ease-out; }
+.animate-toast-in { animation: toast-in 180ms ease-out; }
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background: #cbd5e1;
+  background-clip: padding-box;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
