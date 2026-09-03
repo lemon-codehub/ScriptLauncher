@@ -1,6 +1,7 @@
 # Local-only website and deployment configuration (never publish)
 /website/
 /scripts/package-and-deploy.sh
+/scripts/deploy-website.sh
 
 # Dependencies, build output and caches
 .task/

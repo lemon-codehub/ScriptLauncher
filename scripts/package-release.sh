@@ -23,11 +23,11 @@ usage() {
                                   macOS 架构，默认 separate：arm64、amd64 分开打包
   --windows-arch amd64|arm64      Windows 架构，默认 amd64
   --installer                     必须生成 Windows NSIS 安装器
-  --no-installer                  不生成 Windows 安装器，仅生成便携版
+  --no-installer                  不生成 Windows 安装器，仅生成独立 EXE
   --skip-tests                    跳过 Go 测试和静态检查，仍构建前端
   -h, --help                      显示帮助
 
-产物目录：release/v<版本号>/
+产物目录：release/v<版本号>/（macOS DMG、Windows EXE，不生成 ZIP）
 EOF
 }
 
@@ -107,7 +107,6 @@ require_command pnpm
 require_command python3
 require_command shasum
 require_command wails3
-require_command zip
 
 if [[ "$TARGET" == "all" || "$TARGET" == "mac" ]]; then
   [[ "$(uname -s)" == "Darwin" ]] || fail "macOS 安装包必须在 macOS 主机上生成"
@@ -238,7 +237,6 @@ package_macos_arch() {
   local mac_arch="$1"
   local mac_app_source="$ROOT_DIR/bin/Script Launcher.app"
   local mac_stage="$BACKUP_DIR/macos-$mac_arch"
-  local mac_zip="$RELEASE_DIR/$APP_NAME-$VERSION-macos-$mac_arch.zip"
   local mac_dmg="$RELEASE_DIR/$APP_NAME-$VERSION-macos-$mac_arch.dmg"
 
   echo "==> 打包 macOS ($mac_arch)"
@@ -256,9 +254,7 @@ package_macos_arch() {
   cp LICENSE THIRD_PARTY_NOTICES.md "frontend/Inter Font License.txt" "$mac_stage/"
   ln -s /Applications "$mac_stage/Applications"
 
-  rm -f "$mac_zip" "$mac_dmg"
-  ditto -c -k --sequesterRsrc --keepParent "$mac_stage/Script Launcher.app" "$mac_zip"
-  zip -jq "$mac_zip" LICENSE THIRD_PARTY_NOTICES.md "frontend/Inter Font License.txt"
+  rm -f "$mac_dmg"
   hdiutil create -quiet -volname "Script Launcher $VERSION $mac_arch" -srcfolder "$mac_stage" -ov -format UDZO "$mac_dmg"
 }
 
@@ -281,10 +277,7 @@ if [[ "$TARGET" == "all" || "$TARGET" == "windows" ]]; then
   WINDOWS_SOURCE="$ROOT_DIR/bin/$BINARY_NAME.exe"
   [[ -f "$WINDOWS_SOURCE" ]] || fail "未找到 Windows 应用 $WINDOWS_SOURCE"
   WINDOWS_EXE="$RELEASE_DIR/$APP_NAME-$VERSION-windows-$WINDOWS_ARCH.exe"
-  WINDOWS_ZIP="$RELEASE_DIR/$APP_NAME-$VERSION-windows-$WINDOWS_ARCH-portable.zip"
   cp "$WINDOWS_SOURCE" "$WINDOWS_EXE"
-  rm -f "$WINDOWS_ZIP"
-  zip -jq "$WINDOWS_ZIP" "$WINDOWS_EXE" LICENSE THIRD_PARTY_NOTICES.md "frontend/Inter Font License.txt"
 
   if [[ "$INSTALLER_MODE" != "disabled" ]] && command -v makensis >/dev/null 2>&1; then
     echo "==> 生成 Windows NSIS 安装器"
@@ -297,12 +290,14 @@ if [[ "$TARGET" == "all" || "$TARGET" == "windows" ]]; then
   fi
 fi
 
+# Keep license notices alongside standalone Windows executables as well as in DMGs.
+cp LICENSE THIRD_PARTY_NOTICES.md "frontend/Inter Font License.txt" "$RELEASE_DIR/"
 CHECKSUM_FILE="$RELEASE_DIR/SHA256SUMS.txt"
 rm -f "$CHECKSUM_FILE"
 (
   cd "$RELEASE_DIR"
-  for artifact in *; do
-    [[ -f "$artifact" && "$artifact" != "SHA256SUMS.txt" ]] || continue
+  for artifact in "$APP_NAME-$VERSION-"*.dmg "$APP_NAME-$VERSION-"*.exe; do
+    [[ -f "$artifact" ]] || continue
     shasum -a 256 "$artifact"
   done
 ) > "$CHECKSUM_FILE"

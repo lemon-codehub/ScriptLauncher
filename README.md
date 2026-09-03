@@ -39,11 +39,11 @@
 
 | 系统 | 下载架构 | 产物 |
 | --- | --- | --- |
-| macOS，Apple Silicon（M 系列） | arm64 | DMG / ZIP |
-| macOS，Intel | amd64（即 x86_64） | DMG / ZIP |
-| Windows 10 / 11，64 位 | amd64（即 x64） | EXE / 便携 ZIP |
+| macOS，Apple Silicon（M 系列） | arm64 | DMG |
+| macOS，Intel | amd64（即 x86_64） | DMG |
+| Windows 10 / 11，64 位 | amd64（即 x64） | EXE |
 
-macOS 打开 DMG 后，将 `Script Launcher.app` 拖入“应用程序”。Windows 可解压便携 ZIP 后运行 EXE；需要 Microsoft Edge WebView2 Runtime。
+macOS 打开 DMG 后，将 `Script Launcher.app` 拖入“应用程序”。Windows 直接运行 EXE；需要 Microsoft Edge WebView2 Runtime。
 
 当前自动构建的 macOS 包使用 ad-hoc 签名，未经 Apple 公证；Windows 包也没有 Authenticode 签名，系统可能显示安全提示。请核对下载来源和 SHA-256，只运行你信任的程序；不要全局关闭系统安全机制。
 
@@ -124,13 +124,13 @@ macOS 上可以一条命令打包三个发行架构：
 # 合并为可选的 Universal 包（默认是分架构包）
 ./scripts/package-release.sh 0.0.2 --target mac --mac-arch universal
 
-# Windows 便携版；在 macOS 上使用 Go 交叉编译
+# Windows 独立 EXE；在 macOS 上使用 Go 交叉编译
 ./scripts/package-release.sh 0.0.2 --target windows --no-installer
 ```
 
-产物位于 `release/v0.0.2/`，包含版本化文件名、许可证文件（DMG/ZIP 内）与 `SHA256SUMS.txt`。脚本自动安装锁定的前端依赖、构建、测试并恢复临时修改的版本元数据。`--skip-tests` 仅跳过 Go 测试和静态检查，前端仍会构建。
+产物位于 `release/v0.0.2/`，应用包仅包含两个架构的 macOS DMG 与 Windows EXE，不生成 ZIP。另附许可证文件（DMG 内及发行目录）与用于校验应用文件的 `SHA256SUMS.txt`；再分发 EXE 时请一并提供许可证文件。脚本自动安装锁定的前端依赖、构建、测试并恢复临时修改的版本元数据。`--skip-tests` 仅跳过 Go 测试和静态检查，前端仍会构建。
 
-本地额外安装 NSIS 后，可使用 `--installer` 生成 Windows 安装器；GitHub Actions 默认只生成 EXE 与便携 ZIP，不依赖签名密钥或 NSIS。
+本地额外安装 NSIS 后，可使用 `--installer` 生成 Windows 安装器；GitHub Actions 的 Windows 构建只生成独立 EXE，不依赖签名密钥或 NSIS。
 
 校验下载文件：
 
@@ -144,7 +144,7 @@ shasum -a 256 -c SHA256SUMS.txt
 仓库包含两个工作流，第三方 Action 固定到提交 SHA：
 
 - **CI**：推送 `main` 或提交 PR 时，构建前端、运行 Go 测试和静态检查，并验证 Windows x64 交叉编译。
-- **Package Release**：在 macOS runner 上分别构建 Mac arm64、Mac x86_64、Windows x64；合并校验文件后上传可下载的 workflow artifact。
+- **Package Release**：在 macOS runner 上分别构建 Mac arm64、Mac x86_64、Windows x64；每个平台直接上传单个 DMG / EXE，使用 `archive: false`，下载时不再套 ZIP，也不再上传多平台合集。另提供 `SHA256SUMS.txt`，许可证文件保留在仓库及 GitHub Release 附件中。
 
 ### 手动打包
 

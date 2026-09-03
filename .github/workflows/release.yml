@@ -48,12 +48,15 @@ jobs:
           - name: macos-arm64
             target: mac
             arch: arm64
+            suffix: macos-arm64.dmg
           - name: macos-amd64
             target: mac
             arch: amd64
+            suffix: macos-amd64.dmg
           - name: windows-amd64
             target: windows
             arch: amd64
+            suffix: windows-amd64.exe
     env:
       RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
       PACKAGE_TARGET: ${{ matrix.target }}
@@ -80,11 +83,10 @@ jobs:
           git diff --exit-code -- go.mod go.sum frontend/pnpm-lock.yaml build/config.yml build/darwin/Info.plist build/windows/info.json build/windows/wails.exe.manifest build/windows/nsis/wails_tools.nsh
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: build-${{ matrix.name }}
-          path: release/v${{ env.RELEASE_VERSION }}/*
+          path: release/v${{ env.RELEASE_VERSION }}/ScriptLauncher-${{ env.RELEASE_VERSION }}-${{ matrix.suffix }}
+          archive: false
           if-no-files-found: error
-          compression-level: 0
-          retention-days: 14
+          retention-days: 30
 
   collect:
     needs: [prepare, build]
@@ -100,27 +102,28 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
-          pattern: build-*
-          path: artifacts
+          pattern: ScriptLauncher-${{ env.RELEASE_VERSION }}-*
+          path: release
+          merge-multiple: true
       - name: Verify all platforms and assemble checksums
         shell: bash
         run: |
-          mkdir -p release
-          for directory in artifacts/build-*; do
-            (cd "$directory" && sha256sum -c SHA256SUMS.txt)
-            cp "$directory"/ScriptLauncher-* release/
-          done
-          for suffix in macos-arm64.dmg macos-arm64.zip macos-amd64.dmg macos-amd64.zip windows-amd64.exe windows-amd64-portable.zip; do
+          for suffix in macos-arm64.dmg macos-amd64.dmg windows-amd64.exe; do
             test -s "release/ScriptLauncher-$RELEASE_VERSION-$suffix"
           done
+          test "$(find release -type f | wc -l)" -eq 3
           cp LICENSE THIRD_PARTY_NOTICES.md "frontend/Inter Font License.txt" release/
-          (cd release && sha256sum ScriptLauncher-* LICENSE THIRD_PARTY_NOTICES.md 'Inter Font License.txt' > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
+          (cd release && sha256sum ScriptLauncher-* > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
+          {
+            echo '## Downloads'
+            echo 'Each application artifact is a direct DMG or EXE download, without a ZIP wrapper.'
+            echo "License notices: [LICENSE](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/LICENSE), [third-party notices](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/THIRD_PARTY_NOTICES.md), [Inter font license](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_SHA/frontend/Inter%20Font%20License.txt)."
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: ScriptLauncher-v${{ env.RELEASE_VERSION }}
-          path: release/*
+          path: release/SHA256SUMS.txt
+          archive: false
           if-no-files-found: error
-          compression-level: 0
           retention-days: 30
       - name: Create or update a draft release for the tag
         if: github.ref_type == 'tag'
