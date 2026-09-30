@@ -41,6 +41,22 @@ function LauncherPage() {
     () => Events.On('execution:log', (event) => handleExecutionEvent(event.data as ExecutionEvent)),
     [handleExecutionEvent],
   )
+  useEffect(
+    () => Events.On('execution:open-log', (event) => {
+      const entryID = Number(event.data)
+      if (Number.isSafeInteger(entryID) && entryID > 0) {
+        const state = useLauncherStore.getState()
+        if (state.logSessions[entryID]) {
+          state.selectLog(entryID)
+        } else {
+          useLauncherStore.setState({ notice: {
+            id: Date.now(), tone: 'error', message: '这次运行的日志已不在当前会话中。',
+          } })
+        }
+      }
+    }),
+    [],
+  )
   useEffect(() => {
     if (!notice) return
     const timer = window.setTimeout(clearNotice, notice.tone === 'error' ? 5000 : 2800)

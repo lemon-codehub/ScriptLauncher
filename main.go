@@ -12,6 +12,7 @@ var assets embed.FS
 
 func init() {
 	application.RegisterEvent[ExecutionEvent]("execution:log")
+	application.RegisterEvent[int64]("execution:open-log")
 }
 
 func main() {
@@ -36,7 +37,7 @@ func main() {
 	})
 	service.setApp(app)
 
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Script Launcher",
 		Width:     1180,
 		Height:    760,
@@ -49,6 +50,7 @@ func main() {
 		BackgroundColour: application.NewRGB(246, 247, 249),
 		URL:              "/",
 	})
+	service.notifications = newExecutionNotifications(app, window)
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)

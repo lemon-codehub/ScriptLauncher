@@ -30,6 +30,7 @@
 - **一键执行**：Shell、Python、Node.js、PowerShell、Batch、EXE、macOS App 和 PATH 中的命令。
 - **实时执行日志**：底部固定日志面板，可拖动调整高度、切换任务、清空显示。
 - **终止运行**：后台任务运行期间可终止其进程组；结束后显示“已终止”，日志保留。
+- **任务完成通知**：切换到其他应用、隐藏或最小化窗口后，后台任务成功或失败时发送系统通知，点击通知返回对应执行日志。
 - **常用入口优先**：点击统计、使用频率排序、名称/路径/参数搜索。
 - **自定义图标**：可搜索的 Lucide 图标、Emoji 选择器和自定义图片。
 - **配置与外观**：工作目录、启动参数、系统终端模式，以及浅色/深色/跟随系统主题。
@@ -65,6 +66,7 @@ macOS 打开 DMG 后，将 `Script Launcher.app` 拖入“应用程序”。Wind
 - 支持的 Unix 脚本优先使用 shebang；macOS 会补充用户交互式 Shell 的 PATH。
 - 未指定工作目录时，本地脚本使用脚本所在目录；PATH 命令继承应用工作目录。
 - **在终端中显示**：任务交给系统终端后即返回，此时“成功”只表示启动成功。后续输出和停止操作请在终端处理，应用内的“终止”不适用于此模式。
+- 系统通知仅在应用窗口不在前台时发送；macOS 首次启动会请求通知权限，可在系统设置中调整。系统终端模式启动成功不发送“任务完成”通知，手动终止也不发送成功/失败通知。macOS 通知需从带有应用标识并签名的 `.app` 中运行；直接执行裸二进制时仍可正常使用启动器和应用内提示。
 - macOS App 通过系统 `open` 启动，状态表示启动请求结果，不跟踪 GUI 应用的整个生命周期。
 - 后台终止针对当前进程组（Windows 为进程树）；自行脱离进程组或交给其他服务管理的任务不保证能被结束。
 - 前端每个入口保留最近约 200 KiB 日志文本；后端结果摘要保留最近 12 KiB。日志不是持久化审计记录。
@@ -121,26 +123,26 @@ wails3 task darwin:package
 macOS 上可以一条命令打包三个发行架构：
 
 ```bash
-./scripts/package-release.sh 0.0.2 --no-installer
+./scripts/package-release.sh 0.0.3 --no-installer
 
 # 只生成一个 macOS 架构
-./scripts/package-release.sh 0.0.2 --target mac --mac-arch arm64
+./scripts/package-release.sh 0.0.3 --target mac --mac-arch arm64
 
 # 合并为可选的 Universal 包（默认是分架构包）
-./scripts/package-release.sh 0.0.2 --target mac --mac-arch universal
+./scripts/package-release.sh 0.0.3 --target mac --mac-arch universal
 
 # Windows 独立 EXE；在 macOS 上使用 Go 交叉编译
-./scripts/package-release.sh 0.0.2 --target windows --no-installer
+./scripts/package-release.sh 0.0.3 --target windows --no-installer
 ```
 
-产物位于 `release/v0.0.2/`，应用包仅包含两个架构的 macOS DMG 与 Windows EXE，不生成 ZIP。另附许可证文件（DMG 内及发行目录）与用于校验应用文件的 `SHA256SUMS.txt`；再分发 EXE 时请一并提供许可证文件。脚本自动安装锁定的前端依赖、构建、测试并恢复临时修改的版本元数据。`--skip-tests` 仅跳过 Go 测试和静态检查，前端仍会构建。
+产物位于 `release/v0.0.3/`，应用包仅包含两个架构的 macOS DMG 与 Windows EXE，不生成 ZIP。另附许可证文件（DMG 内及发行目录）与用于校验应用文件的 `SHA256SUMS.txt`；再分发 EXE 时请一并提供许可证文件。脚本自动安装锁定的前端依赖、构建、测试并恢复临时修改的版本元数据。`--skip-tests` 仅跳过 Go 测试和静态检查，前端仍会构建。
 
 本地额外安装 NSIS 后，可使用 `--installer` 生成 Windows 安装器；GitHub Actions 的 Windows 构建只生成独立 EXE，不依赖签名密钥或 NSIS。
 
 校验下载文件：
 
 ```bash
-cd release/v0.0.2
+cd release/v0.0.3
 shasum -a 256 -c SHA256SUMS.txt
 ```
 
@@ -153,13 +155,13 @@ shasum -a 256 -c SHA256SUMS.txt
 
 ### 手动打包
 
-在 **Actions → Package Release → Run workflow** 填入版本号（如 `0.0.2`），也可以使用 GitHub CLI：
+在 **Actions → Package Release → Run workflow** 填入版本号（如 `0.0.3`），也可以使用 GitHub CLI：
 
 ```bash
-gh workflow run release.yml --ref main -f version=0.0.2
+gh workflow run release.yml --ref main -f version=0.0.3
 gh run list --workflow release.yml
 gh run watch <run-id>
-gh run download <run-id> -n ScriptLauncher-v0.0.2 -D release/v0.0.2
+gh run download <run-id> -p 'ScriptLauncher-0.0.3-*' -D release/v0.0.3
 ```
 
 手动运行只生成构建产物，不会创建标签或公开发布新版本。
@@ -167,8 +169,8 @@ gh run download <run-id> -n ScriptLauncher-v0.0.2 -D release/v0.0.2
 ### 创建 Release 草稿
 
 ```bash
-git tag v0.0.2
-git push origin v0.0.2
+git tag v0.0.3
+git push origin v0.0.3
 ```
 
 推送符合 `vX.Y.Z` 的标签会触发同一打包流程，并将产物上传至对应的 **Draft Release**。确认测试与版本说明后，再在 GitHub 发布草稿。版本号不可包含额外 Shell 字符。

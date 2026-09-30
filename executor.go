@@ -46,6 +46,7 @@ func (s *LauncherService) ExecuteEntry(id int64) (result ExecutionResult) {
 		StartedAt: started.UTC().Format(time.RFC3339Nano),
 	}
 	entryName := ""
+	externalTerminal := false
 	defer func() {
 		ended := time.Now()
 		result.EndedAt = ended.UTC().Format(time.RFC3339Nano)
@@ -61,6 +62,9 @@ func (s *LauncherService) ExecuteEntry(id int64) (result ExecutionResult) {
 			Timestamp:  result.EndedAt,
 			DurationMS: result.DurationMS,
 		})
+		if s.notifications != nil && !(externalTerminal && result.Status == "success") {
+			s.notifications.notifyCompletion(entryName, result)
+		}
 	}()
 
 	entry, err := s.getEntry(id)
@@ -70,6 +74,7 @@ func (s *LauncherService) ExecuteEntry(id int64) (result ExecutionResult) {
 		return
 	}
 	entryName = entry.Name
+	externalTerminal = entry.ShowTerminal
 	if err := s.recordEntryClick(id, result.StartedAt); err != nil {
 		result.Error = err.Error()
 		result.Message = "记录点击失败"

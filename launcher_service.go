@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -12,10 +13,11 @@ import (
 )
 
 type LauncherService struct {
-	db           *sql.DB
-	app          *application.App
-	executionsMu sync.Mutex
-	executions   map[int64]*runningExecution
+	db            *sql.DB
+	app           *application.App
+	executionsMu  sync.Mutex
+	executions    map[int64]*runningExecution
+	notifications *executionNotifications
 }
 
 func NewLauncherService() (*LauncherService, error) {
@@ -36,6 +38,25 @@ func NewLauncherServiceAt(path string) (*LauncherService, error) {
 
 func (s *LauncherService) setApp(app *application.App) {
 	s.app = app
+}
+
+// ServiceStartup initializes optional desktop notifications without preventing
+// the launcher from opening when notifications are unavailable.
+//
+//wails:ignore
+func (s *LauncherService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	if s.notifications != nil {
+		s.notifications.start(ctx, options)
+	}
+	return nil
+}
+
+//wails:ignore
+func (s *LauncherService) ServiceShutdown() error {
+	if s.notifications != nil {
+		s.notifications.shutdown()
+	}
+	return nil
 }
 
 func (s *LauncherService) close() error {

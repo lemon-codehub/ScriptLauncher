@@ -30,7 +30,7 @@ jobs:
         run: |
           go test ./...
           go vet ./...
-          go test -race -run TestStopEntry .
+          go test -race -run 'TestStopEntry|Test.*Notification' .
       - name: Verify Windows x64 compilation
         env:
           GOOS: windows

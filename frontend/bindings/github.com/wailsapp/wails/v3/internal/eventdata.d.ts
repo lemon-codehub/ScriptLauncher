@@ -13,6 +13,7 @@ declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
             "execution:log": main$0.ExecutionEvent;
+            "execution:open-log": number;
         }
     }
 }
